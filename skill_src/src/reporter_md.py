@@ -41,6 +41,26 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_path: Path) 
             lines.extend(_format_finding(f))
             lines.append("")
 
+        # 슬라이드별 그룹
+        lines.append("## 슬라이드별 이슈")
+        lines.append("")
+        slides_meta = {s["index"]: s.get("title", "") for s in extracted.get("slides", [])}
+        by_slide: dict[int, list[dict[str, Any]]] = {}
+        for f in findings.get("findings", []):
+            by_slide.setdefault(f.get("slide_index", 0), []).append(f)
+        for slide_idx in sorted(by_slide.keys()):
+            title_val = slides_meta.get(slide_idx, "")
+            heading = f"### 슬라이드 {slide_idx}"
+            if title_val:
+                heading += f": {title_val}"
+            lines.append(heading)
+            lines.append("")
+            for f in by_slide[slide_idx]:
+                sev = _SEVERITY_KO.get(f.get("severity", ""), "")
+                cat = _CATEGORY_KO.get(f.get("category", ""), "")
+                lines.append(f"- [{f.get('id', '?')}] {sev} · {cat} · {f.get('issue', '')}")
+            lines.append("")
+
     out_path.write_text("\n".join(lines), encoding="utf-8")
     return out_path
 

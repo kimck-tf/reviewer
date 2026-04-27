@@ -46,3 +46,32 @@ def test_single_finding_includes_all_fields(tmp_path):
     assert "본문 인용과 불일치" in text
     assert "240 MPa로 수정" in text
     assert "행 3·열 2" in text
+
+
+def test_findings_grouped_by_slide(tmp_path):
+    findings = {
+        "summary": {"total_issues": 3, "by_severity": {"critical": 1, "warning": 2}, "by_category": {"typo": 2, "data": 1}},
+        "findings": [
+            {"id": "F001", "category": "typo", "severity": "warning", "slide_index": 1,
+             "shape_id": "s1_sh1", "position_hint": "슬라이드 1", "quoted_text": "오타1", "issue": "...", "suggestion": "..."},
+            {"id": "F002", "category": "typo", "severity": "warning", "slide_index": 2,
+             "shape_id": "s2_sh1", "position_hint": "슬라이드 2", "quoted_text": "오타2", "issue": "...", "suggestion": "..."},
+            {"id": "F003", "category": "data", "severity": "critical", "slide_index": 1,
+             "shape_id": "s1_sh3", "position_hint": "슬라이드 1", "quoted_text": "값", "issue": "...", "suggestion": "..."},
+        ],
+    }
+    extracted = {"metadata": {"title": "테스트", "slide_count": 3}, "slides": [
+        {"index": 1, "title": "표지"}, {"index": 2, "title": "본문"}, {"index": 3, "title": "결론"}
+    ]}
+    out_path = tmp_path / "review.md"
+    render(findings, extracted, out_path)
+    text = out_path.read_text(encoding="utf-8")
+
+    assert "## 슬라이드별 이슈" in text
+    assert "### 슬라이드 1" in text or "### 슬라이드 1: 표지" in text
+    assert "### 슬라이드 2" in text or "### 슬라이드 2: 본문" in text
+    s1_section_start = text.find("### 슬라이드 1")
+    s2_section_start = text.find("### 슬라이드 2")
+    s1_block = text[s1_section_start:s2_section_start]
+    assert "F001" in s1_block
+    assert "F003" in s1_block
