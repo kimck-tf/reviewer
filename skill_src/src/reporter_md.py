@@ -3,6 +3,17 @@ from pathlib import Path
 from typing import Any
 
 
+_SEVERITY_KO = {"critical": "🔴 Critical", "warning": "🟠 Warning", "info": "🔵 Info"}
+_CATEGORY_KO = {
+    "typo": "오타",
+    "terminology": "용어 통일",
+    "data": "데이터",
+    "conclusion": "결론 검증",
+    "improvement": "개선 제안",
+    "logic": "논리·강도",
+}
+
+
 def render(findings: dict[str, Any], extracted: dict[str, Any], out_path: Path) -> Path:
     """findings.json + extracted.json → 마크다운 리포트 파일 생성. 출력 경로 반환."""
     out_path = Path(out_path)
@@ -24,7 +35,30 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_path: Path) 
         lines.append("")
         lines.append("발견된 이슈가 없습니다. 보고서를 그대로 제출 가능합니다.")
     else:
-        lines.append("(상세 내용은 후속 task에서 추가)")
+        lines.append("## 발견된 이슈")
+        lines.append("")
+        for f in findings.get("findings", []):
+            lines.extend(_format_finding(f))
+            lines.append("")
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
     return out_path
+
+
+def _format_finding(f: dict[str, Any]) -> list[str]:
+    """단일 finding을 마크다운 블록(라인 리스트)으로."""
+    sev = _SEVERITY_KO.get(f.get("severity", "info"), f.get("severity", "info"))
+    cat = _CATEGORY_KO.get(f.get("category", ""), f.get("category", ""))
+    block = [
+        f"### [{f.get('id', '?')}] {sev} · {cat} · {f.get('position_hint', '')}",
+        "",
+        f"**원문 인용**: \"{f.get('quoted_text', '')}\"",
+        "",
+        f"**문제**: {f.get('issue', '')}",
+        "",
+        f"**개선 제안**: {f.get('suggestion', '')}",
+    ]
+    evidence = f.get("evidence")
+    if evidence:
+        block.extend(["", f"**근거**: {evidence}"])
+    return block
