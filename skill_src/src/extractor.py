@@ -9,10 +9,12 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 def extract(pptx_path: Path) -> dict[str, Any]:
     pptx_path = Path(pptx_path)
     prs = Presentation(str(pptx_path))
+    slide_w = prs.slide_width or 0
+    slide_h = prs.slide_height or 0
 
     slides = []
     for idx, slide in enumerate(prs.slides, start=1):
-        shapes = _extract_shapes(slide, slide_index=idx)
+        shapes = _extract_shapes(slide, slide_index=idx, slide_w=slide_w, slide_h=slide_h)
         slides.append({
             "index": idx,
             "title": _get_slide_title(slide),
@@ -43,7 +45,7 @@ def _get_slide_title(slide) -> str:
     return ""
 
 
-def _extract_shapes(slide, slide_index: int) -> list[dict[str, Any]]:
+def _extract_shapes(slide, slide_index: int, slide_w: int, slide_h: int) -> list[dict[str, Any]]:
     out = []
     for sh_idx, shape in enumerate(slide.shapes, start=1):
         shape_type = _classify_shape_type(shape)
@@ -61,16 +63,25 @@ def _extract_shapes(slide, slide_index: int) -> list[dict[str, Any]]:
                 "cells": cells,
             }
 
+        left = int(shape.left) if shape.left is not None else 0
+        top = int(shape.top) if shape.top is not None else 0
+        width = int(shape.width) if shape.width is not None else 0
+        height = int(shape.height) if shape.height is not None else 0
+
+        position_pct: dict[str, float] = {}
+        if slide_w and slide_h:
+            position_pct = {
+                "left": left / slide_w,
+                "top": top / slide_h,
+                "width": width / slide_w,
+                "height": height / slide_h,
+            }
+
         out.append({
             "shape_id": f"s{slide_index}_sh{sh_idx}",
             "type": shape_type,
-            "position_emu": {
-                "left": int(shape.left) if shape.left is not None else 0,
-                "top": int(shape.top) if shape.top is not None else 0,
-                "width": int(shape.width) if shape.width is not None else 0,
-                "height": int(shape.height) if shape.height is not None else 0,
-            },
-            "position_pct": {},
+            "position_emu": {"left": left, "top": top, "width": width, "height": height},
+            "position_pct": position_pct,
             "z_order": sh_idx,
             "text": text,
             "table": table_data,

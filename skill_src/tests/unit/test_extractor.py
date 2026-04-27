@@ -37,3 +37,14 @@ def test_extract_table_shape(sample_with_table: Path):
     assert tbl["cells"][0] == ["항목", "값", "단위"]
     # 데이터 행
     assert tbl["cells"][1] == ["최대 응력", "240", "MPa"]
+
+
+def test_extract_position_pct(sample_text_only: Path):
+    result = extract(sample_text_only)
+    slide1 = result["slides"][0]
+    for shape in slide1["shapes"]:
+        pct = shape["position_pct"]
+        assert "left" in pct and 0.0 <= pct["left"] <= 1.0
+        assert "top" in pct and 0.0 <= pct["top"] <= 1.0
+        assert "width" in pct and 0.0 <= pct["width"] <= 1.0
+        assert "height" in pct and 0.0 <= pct["height"] <= 1.0
