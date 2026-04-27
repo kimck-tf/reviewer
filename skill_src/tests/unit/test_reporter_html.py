@@ -47,3 +47,30 @@ def test_html_includes_slide_cards_with_thumbnails(tmp_path):
     assert "F001" in text
     assert (out_dir / "assets" / "thumbnails" / "slide_002.jpg").exists()
     assert "assets/thumbnails/slide_002.jpg" in text
+
+
+def test_html_includes_position_boxes(tmp_path):
+    findings = {
+        "summary": {"total_issues": 1, "by_severity": {"warning": 1}, "by_category": {"typo": 1}},
+        "findings": [
+            {"id": "F001", "category": "typo", "severity": "warning", "slide_index": 1,
+             "shape_id": "s1_sh3", "position_hint": "슬라이드 1 우측 상단",
+             "position_pct": {"left": 0.7, "top": 0.15, "width": 0.25, "height": 0.10},
+             "quoted_text": "x", "issue": "i", "suggestion": "s", "evidence": ""}
+        ],
+    }
+    thumb = tmp_path / "ws" / "thumbnails" / "slide_001.jpg"
+    thumb.parent.mkdir(parents=True, exist_ok=True)
+    thumb.write_bytes(b"fake")
+    extracted = {
+        "metadata": {"title": "T", "slide_count": 1},
+        "slides": [{"index": 1, "title": "표지", "thumbnail_path": str(thumb)}],
+    }
+    out_dir = tmp_path / "out"
+    render(findings, extracted, out_dir)
+
+    text = (out_dir / "review.html").read_text(encoding="utf-8")
+    assert "position-box" in text
+    assert "left:70" in text or "left: 70" in text
+    assert "top:15" in text or "top: 15" in text
+    assert "width:25" in text or "width: 25" in text
