@@ -1,4 +1,4 @@
-import os
+import pytest
 from src.config import Config
 
 
@@ -21,6 +21,5 @@ def test_env_override_image_dim():
 
 
 def test_invalid_int_raises():
-    import pytest
     with pytest.raises(ValueError):
         Config.from_env({"REPORT_REVIEWER_BATCH_SIZE": "abc"})
