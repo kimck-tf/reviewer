@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import pytest
 from src.extractor import extract
@@ -72,3 +73,14 @@ def test_extract_detects_embedded(sample_with_embedded: Path):
             ole_shapes = [s for s in slide["shapes"] if s["type"] == "EmbeddedOLE"]
             assert len(ole_shapes) >= 1
             assert ole_shapes[0]["embedded_progid"]  # non-empty
+
+
+def test_extract_text_only_matches_golden(sample_text_only: Path, fixtures_dir: Path):
+    result = extract(sample_text_only)
+    # 변동 가능 필드 정규화 (골든과 동일하게)
+    result["metadata"]["file_path"] = "<FIXTURE>"
+    result["metadata"]["created"] = "<NORMALIZED>"
+    result["metadata"]["modified"] = "<NORMALIZED>"
+    golden_path = fixtures_dir / "golden" / "extractor_outputs" / "sample_text_only.json"
+    expected = json.loads(golden_path.read_text(encoding="utf-8"))
+    assert result == expected

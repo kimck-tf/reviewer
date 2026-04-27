@@ -1,0 +1,282 @@
+{
+  "metadata": {
+    "file_path": "<FIXTURE>",
+    "title": "",
+    "author": "",
+    "created": "<NORMALIZED>",
+    "modified": "<NORMALIZED>",
+    "slide_count": 5
+  },
+  "slides": [
+    {
+      "index": 1,
+      "title": "프론트 서스펜션 강도 해석",
+      "layout": "Title Slide",
+      "shapes": [
+        {
+          "shape_id": "s1_sh1",
+          "type": "Title",
+          "position_emu": {
+            "left": 685800,
+            "top": 2130425,
+            "width": 7772400,
+            "height": 1470025
+          },
+          "position_pct": {
+            "left": 0.0562514072079395,
+            "top": 0.3106481481481482,
+            "width": 0.6375159483566477,
+            "height": 0.21435185185185185
+          },
+          "z_order": 1,
+          "text": "프론트 서스펜션 강도 해석",
+          "table": null,
+          "image_ref": null,
+          "embedded_progid": null
+        },
+        {
+          "shape_id": "s1_sh2",
+          "type": "Other",
+          "position_emu": {
+            "left": 1371600,
+            "top": 3886200,
+            "width": 6400800,
+            "height": 1752600
+          },
+          "position_pct": {
+            "left": 0.112502814415879,
+            "top": 0.5666666666666667,
+            "width": 0.5250131339407687,
+            "height": 0.25555555555555554
+          },
+          "z_order": 2,
+          "text": "작성자: 홍길동\n2026-04-27",
+          "table": null,
+          "image_ref": null,
+          "embedded_progid": null
+        }
+      ],
+      "notes": "",
+      "image_path": null,
+      "thumbnail_path": null,
+      "embedded_image_paths": [],
+      "has_embedded": false
+    },
+    {
+      "index": 2,
+      "title": "목차",
+      "layout": "Title and Content",
+      "shapes": [
+        {
+          "shape_id": "s2_sh1",
+          "type": "Title",
+          "position_emu": {
+            "left": 457200,
+            "top": 274638,
+            "width": 8229600,
+            "height": 1143000
+          },
+          "position_pct": {
+            "left": 0.03750093813862634,
+            "top": 0.04004636920384952,
+            "width": 0.675016886495274,
+            "height": 0.16666666666666666
+          },
+          "z_order": 1,
+          "text": "목차",
+          "table": null,
+          "image_ref": null,
+          "embedded_progid": null
+        },
+        {
+          "shape_id": "s2_sh2",
+          "type": "Other",
+          "position_emu": {
+            "left": 457200,
+            "top": 1600200,
+            "width": 8229600,
+            "height": 4525963
+          },
+          "position_pct": {
+            "left": 0.03750093813862634,
+            "top": 0.23333333333333334,
+            "width": 0.675016886495274,
+            "height": 0.659953776611257
+          },
+          "z_order": 2,
+          "text": "1. 해석 목적\n2. 모델 정보\n3. 경계조건\n4. 결과\n5. 결론",
+          "table": null,
+          "image_ref": null,
+          "embedded_progid": null
+        }
+      ],
+      "notes": "",
+      "image_path": null,
+      "thumbnail_path": null,
+      "embedded_image_paths": [],
+      "has_embedded": false
+    },
+    {
+      "index": 3,
+      "title": "해석 목적",
+      "layout": "Title and Content",
+      "shapes": [
+        {
+          "shape_id": "s3_sh1",
+          "type": "Title",
+          "position_emu": {
+            "left": 457200,
+            "top": 274638,
+            "width": 8229600,
+            "height": 1143000
+          },
+          "position_pct": {
+            "left": 0.03750093813862634,
+            "top": 0.04004636920384952,
+            "width": 0.675016886495274,
+            "height": 0.16666666666666666
+          },
+          "z_order": 1,
+          "text": "해석 목적",
+          "table": null,
+          "image_ref": null,
+          "embedded_progid": null
+        },
+        {
+          "shape_id": "s3_sh2",
+          "type": "Other",
+          "position_emu": {
+            "left": 457200,
+            "top": 1600200,
+            "width": 8229600,
+            "height": 4525963
+          },
+          "position_pct": {
+            "left": 0.03750093813862634,
+            "top": 0.23333333333333334,
+            "width": 0.675016886495274,
+            "height": 0.659953776611257
+          },
+          "z_order": 2,
+          "text": "해석 목적에 대한 설명입니다.\n참고 사항을 적습니다.",
+          "table": null,
+          "image_ref": null,
+          "embedded_progid": null
+        }
+      ],
+      "notes": "슬라이드 3 발표 노트",
+      "image_path": null,
+      "thumbnail_path": null,
+      "embedded_image_paths": [],
+      "has_embedded": false
+    },
+    {
+      "index": 4,
+      "title": "모델 정보",
+      "layout": "Title and Content",
+      "shapes": [
+        {
+          "shape_id": "s4_sh1",
+          "type": "Title",
+          "position_emu": {
+            "left": 457200,
+            "top": 274638,
+            "width": 8229600,
+            "height": 1143000
+          },
+          "position_pct": {
+            "left": 0.03750093813862634,
+            "top": 0.04004636920384952,
+            "width": 0.675016886495274,
+            "height": 0.16666666666666666
+          },
+          "z_order": 1,
+          "text": "모델 정보",
+          "table": null,
+          "image_ref": null,
+          "embedded_progid": null
+        },
+        {
+          "shape_id": "s4_sh2",
+          "type": "Other",
+          "position_emu": {
+            "left": 457200,
+            "top": 1600200,
+            "width": 8229600,
+            "height": 4525963
+          },
+          "position_pct": {
+            "left": 0.03750093813862634,
+            "top": 0.23333333333333334,
+            "width": 0.675016886495274,
+            "height": 0.659953776611257
+          },
+          "z_order": 2,
+          "text": "모델 정보에 대한 설명입니다.\n참고 사항을 적습니다.",
+          "table": null,
+          "image_ref": null,
+          "embedded_progid": null
+        }
+      ],
+      "notes": "슬라이드 4 발표 노트",
+      "image_path": null,
+      "thumbnail_path": null,
+      "embedded_image_paths": [],
+      "has_embedded": false
+    },
+    {
+      "index": 5,
+      "title": "결과",
+      "layout": "Title and Content",
+      "shapes": [
+        {
+          "shape_id": "s5_sh1",
+          "type": "Title",
+          "position_emu": {
+            "left": 457200,
+            "top": 274638,
+            "width": 8229600,
+            "height": 1143000
+          },
+          "position_pct": {
+            "left": 0.03750093813862634,
+            "top": 0.04004636920384952,
+            "width": 0.675016886495274,
+            "height": 0.16666666666666666
+          },
+          "z_order": 1,
+          "text": "결과",
+          "table": null,
+          "image_ref": null,
+          "embedded_progid": null
+        },
+        {
+          "shape_id": "s5_sh2",
+          "type": "Other",
+          "position_emu": {
+            "left": 457200,
+            "top": 1600200,
+            "width": 8229600,
+            "height": 4525963
+          },
+          "position_pct": {
+            "left": 0.03750093813862634,
+            "top": 0.23333333333333334,
+            "width": 0.675016886495274,
+            "height": 0.659953776611257
+          },
+          "z_order": 2,
+          "text": "결과에 대한 설명입니다.\n참고 사항을 적습니다.",
+          "table": null,
+          "image_ref": null,
+          "embedded_progid": null
+        }
+      ],
+      "notes": "슬라이드 5 발표 노트",
+      "image_path": null,
+      "thumbnail_path": null,
+      "embedded_image_paths": [],
+      "has_embedded": false
+    }
+  ]
+}
