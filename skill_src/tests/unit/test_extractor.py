@@ -48,3 +48,10 @@ def test_extract_position_pct(sample_text_only: Path):
         assert "top" in pct and 0.0 <= pct["top"] <= 1.0
         assert "width" in pct and 0.0 <= pct["width"] <= 1.0
         assert "height" in pct and 0.0 <= pct["height"] <= 1.0
+
+
+def test_extract_speaker_notes(sample_text_only: Path):
+    result = extract(sample_text_only)
+    # _make_fixtures.py에서 슬라이드 3~5에 노트 추가됨
+    slide3 = result["slides"][2]
+    assert "발표 노트" in slide3["notes"]

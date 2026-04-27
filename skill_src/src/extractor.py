@@ -15,12 +15,15 @@ def extract(pptx_path: Path) -> dict[str, Any]:
     slides = []
     for idx, slide in enumerate(prs.slides, start=1):
         shapes = _extract_shapes(slide, slide_index=idx, slide_w=slide_w, slide_h=slide_h)
+        notes = ""
+        if slide.has_notes_slide:
+            notes = slide.notes_slide.notes_text_frame.text or ""
         slides.append({
             "index": idx,
             "title": _get_slide_title(slide),
             "layout": slide.slide_layout.name if slide.slide_layout else None,
             "shapes": shapes,
-            "notes": "",
+            "notes": notes,
             "image_path": None,
             "thumbnail_path": None,
             "embedded_image_paths": [],
