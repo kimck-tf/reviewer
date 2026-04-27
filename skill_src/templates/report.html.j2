@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>보고서 검토 결과: {{ title }}</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<h1>보고서 검토 결과: {{ title }}</h1>
+<div class="summary">
+  <p>슬라이드 수: {{ slide_count }}</p>
+  <p>총 이슈: {{ total_issues }}개</p>
+  {% if total_issues > 0 and severity_counts %}
+  <p>심각도:
+    {% for sev_key, sev_label, count in severity_counts %}
+      <span class="severity-{{ sev_key }}">{{ sev_label }}: {{ count }}</span>{% if not loop.last %} · {% endif %}
+    {% endfor %}
+  </p>
+  {% endif %}
+</div>
+
+{% if total_issues == 0 %}
+<div class="empty">
+  <h2>검토 결과 이슈 없음</h2>
+  <p>발견된 이슈가 없습니다.</p>
+</div>
+{% else %}
+{% for slide in slides_with_findings %}
+<div class="slide-card">
+  <h3>슬라이드 {{ slide.index }}{% if slide.title %}: {{ slide.title }}{% endif %}</h3>
+  {% if slide.thumbnail_rel %}
+  <div class="slide-thumb-wrap">
+    <img src="{{ slide.thumbnail_rel }}" alt="슬라이드 {{ slide.index }}">
+    {% for box in slide.boxes %}
+    <div class="position-box" style="left:{{ box.left }}%; top:{{ box.top }}%; width:{{ box.width }}%; height:{{ box.height }}%;"></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% for f in slide.findings %}
+  <div class="finding-card {{ f.severity }}">
+    <strong>[{{ f.id }}] {{ f.severity_label }} · {{ f.category_label }}</strong>
+    <p>원문: "{{ f.quoted_text }}"</p>
+    <p>문제: {{ f.issue }}</p>
+    <p>개선 제안: {{ f.suggestion }}</p>
+    {% if f.evidence %}<p>근거: {{ f.evidence }}</p>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endif %}
+</body>
+</html>
