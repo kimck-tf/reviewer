@@ -40,3 +40,27 @@ def to_hint(position_pct: Mapping[str, float]) -> str:
         zone = f"{h_zone} {v_zone}"
 
     return f"{zone} (좌측 {int(left*100)}%, 상단 {int(top*100)}%)"
+
+
+_TYPE_KO = {
+    "TextBox": "텍스트 박스",
+    "Title": "제목",
+    "Table": "표",
+    "Picture": "그림",
+    "Chart": "차트",
+    "Group": "그룹",
+    "EmbeddedOLE": "임베디드 객체",
+    "Other": "도형",
+}
+
+
+def format_location(
+    slide_index: int,
+    slide_title: str,
+    shape_type: str,
+    position_pct: Mapping[str, float],
+) -> str:
+    pos = to_hint(position_pct)
+    ko_type = _TYPE_KO.get(shape_type, shape_type)
+    title_part = f" ({slide_title})" if slide_title else ""
+    return f"슬라이드 {slide_index}{title_part}의 {pos} {ko_type}"
