@@ -41,12 +41,63 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_dir: Path) -
         if by_sev.get(sk, 0) > 0:
             severity_counts.append((sk, _SEVERITY_LABEL[sk], by_sev[sk]))
 
+    # 이슈가 있는 슬라이드만 카드로 구성
+    slides_meta = {s["index"]: s for s in extracted.get("slides", [])}
+    by_slide: dict[int, list[dict]] = {}
+    for f in findings.get("findings", []):
+        by_slide.setdefault(f.get("slide_index", 0), []).append(f)
+
+    thumb_out_dir = assets_dir / "thumbnails"
+    thumb_out_dir.mkdir(parents=True, exist_ok=True)
+
+    slides_with_findings = []
+    for slide_idx in sorted(by_slide.keys()):
+        meta = slides_meta.get(slide_idx, {})
+        thumb_rel = None
+        thumb_src = meta.get("thumbnail_path")
+        if thumb_src and Path(thumb_src).exists():
+            thumb_dst = thumb_out_dir / f"slide_{slide_idx:03d}.jpg"
+            shutil.copy(thumb_src, thumb_dst)
+            thumb_rel = f"assets/thumbnails/slide_{slide_idx:03d}.jpg"
+
+        formatted_findings = []
+        for f in by_slide[slide_idx]:
+            formatted_findings.append({
+                "id": f.get("id", "?"),
+                "severity": f.get("severity", "info"),
+                "severity_label": _SEVERITY_LABEL.get(f.get("severity", "info"), ""),
+                "category_label": _CATEGORY_LABEL.get(f.get("category", ""), f.get("category", "")),
+                "quoted_text": f.get("quoted_text", ""),
+                "issue": f.get("issue", ""),
+                "suggestion": f.get("suggestion", ""),
+                "evidence": f.get("evidence", ""),
+            })
+
+        boxes = []
+        for f in by_slide[slide_idx]:
+            pct = f.get("position_pct") or {}
+            if "left" in pct and "top" in pct:
+                boxes.append({
+                    "left": int(pct["left"] * 100),
+                    "top": int(pct["top"] * 100),
+                    "width": int(pct.get("width", 0) * 100),
+                    "height": int(pct.get("height", 0) * 100),
+                })
+
+        slides_with_findings.append({
+            "index": slide_idx,
+            "title": meta.get("title", ""),
+            "thumbnail_rel": thumb_rel,
+            "boxes": boxes,
+            "findings": formatted_findings,
+        })
+
     rendered = template.render(
         title=title,
         slide_count=slide_count,
         total_issues=total,
         severity_counts=severity_counts,
-        slides_with_findings=[],  # Task 5.2에서 채움
+        slides_with_findings=slides_with_findings,
     )
     out_path = out_dir / "review.html"
     out_path.write_text(rendered, encoding="utf-8")
