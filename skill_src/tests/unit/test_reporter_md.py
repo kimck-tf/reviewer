@@ -75,3 +75,31 @@ def test_findings_grouped_by_slide(tmp_path):
     s1_block = text[s1_section_start:s2_section_start]
     assert "F001" in s1_block
     assert "F003" in s1_block
+
+
+def test_summary_header_and_category_grouping(tmp_path):
+    findings = {
+        "summary": {
+            "total_issues": 3,
+            "by_severity": {"critical": 1, "warning": 2, "info": 0},
+            "by_category": {"typo": 2, "data": 1, "terminology": 0, "conclusion": 0, "improvement": 0, "logic": 0},
+        },
+        "findings": [
+            {"id": "F001", "category": "typo", "severity": "warning", "slide_index": 1,
+             "shape_id": "s1_sh1", "position_hint": "슬라이드 1", "quoted_text": "x", "issue": "i1", "suggestion": "s1"},
+            {"id": "F002", "category": "typo", "severity": "warning", "slide_index": 2,
+             "shape_id": "s2_sh1", "position_hint": "슬라이드 2", "quoted_text": "y", "issue": "i2", "suggestion": "s2"},
+            {"id": "F003", "category": "data", "severity": "critical", "slide_index": 1,
+             "shape_id": "s1_sh3", "position_hint": "슬라이드 1", "quoted_text": "z", "issue": "i3", "suggestion": "s3"},
+        ],
+    }
+    extracted = {"metadata": {"title": "T", "slide_count": 3}, "slides": [{"index": i} for i in [1, 2, 3]]}
+    out_path = tmp_path / "review.md"
+    render(findings, extracted, out_path)
+    text = out_path.read_text(encoding="utf-8")
+
+    assert "Critical: 1" in text or "🔴" in text
+    assert "Warning: 2" in text or "🟠" in text
+    assert "## 카테고리별 이슈" in text
+    assert "### 오타" in text or "### 오타 (2건)" in text
+    assert "### 데이터" in text or "### 데이터 (1건)" in text

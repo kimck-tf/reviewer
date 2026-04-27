@@ -30,6 +30,18 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_path: Path) 
     lines.append(f"총 이슈: {total}개")
     lines.append("")
 
+    # 요약 헤더 보강
+    by_sev = summary.get("by_severity", {})
+    if by_sev:
+        sev_parts = []
+        for sk, ko in [("critical", "Critical"), ("warning", "Warning"), ("info", "Info")]:
+            n = by_sev.get(sk, 0)
+            if n > 0:
+                sev_parts.append(f"{_SEVERITY_KO.get(sk, ko)}: {n}")
+        if sev_parts:
+            lines.append("심각도: " + " · ".join(sev_parts))
+            lines.append("")
+
     if total == 0:
         lines.append("## 검토 결과 이슈 없음")
         lines.append("")
@@ -59,6 +71,21 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_path: Path) 
                 sev = _SEVERITY_KO.get(f.get("severity", ""), "")
                 cat = _CATEGORY_KO.get(f.get("category", ""), "")
                 lines.append(f"- [{f.get('id', '?')}] {sev} · {cat} · {f.get('issue', '')}")
+            lines.append("")
+
+        # 카테고리별 그룹
+        lines.append("## 카테고리별 이슈")
+        lines.append("")
+        by_cat: dict[str, list[dict[str, Any]]] = {}
+        for f in findings.get("findings", []):
+            by_cat.setdefault(f.get("category", ""), []).append(f)
+        for cat in sorted(by_cat.keys()):
+            cat_ko = _CATEGORY_KO.get(cat, cat)
+            lines.append(f"### {cat_ko} ({len(by_cat[cat])}건)")
+            lines.append("")
+            for f in by_cat[cat]:
+                sev = _SEVERITY_KO.get(f.get("severity", ""), "")
+                lines.append(f"- [{f.get('id', '?')}] {sev} · 슬라이드 {f.get('slide_index')} · {f.get('issue', '')}")
             lines.append("")
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
