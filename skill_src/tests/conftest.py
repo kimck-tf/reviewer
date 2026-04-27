@@ -19,7 +19,7 @@ def sample_text_only(fixtures_dir: Path) -> Path:
 def sample_with_table(fixtures_dir: Path) -> Path:
     p = fixtures_dir / "sample_with_table.pptx"
     if not p.exists():
-        pytest.skip(f"Fixture missing: {p}")
+        pytest.skip(f"Fixture missing: {p} — run tests/fixtures/_make_fixtures.py")
     return p
 
 
@@ -27,7 +27,7 @@ def sample_with_table(fixtures_dir: Path) -> Path:
 def sample_with_image(fixtures_dir: Path) -> Path:
     p = fixtures_dir / "sample_with_image.pptx"
     if not p.exists():
-        pytest.skip(f"Fixture missing: {p}")
+        pytest.skip(f"Fixture missing: {p} — run tests/fixtures/_make_fixtures.py")
     return p
 
 
