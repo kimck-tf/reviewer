@@ -103,3 +103,26 @@ def test_summary_header_and_category_grouping(tmp_path):
     assert "## 카테고리별 이슈" in text
     assert "### 오타" in text or "### 오타 (2건)" in text
     assert "### 데이터" in text or "### 데이터 (1건)" in text
+
+
+def test_render_matches_golden(tmp_path, fixtures_dir):
+    findings = {
+        "summary": {"total_issues": 2, "by_severity": {"critical": 1, "warning": 1, "info": 0},
+                    "by_category": {"typo": 1, "data": 1}},
+        "findings": [
+            {"id": "F001", "category": "typo", "severity": "warning", "slide_index": 2,
+             "shape_id": "s2_sh1", "position_hint": "슬라이드 2 본문 영역", "quoted_text": "안응력",
+             "issue": "오타: 안응력 → 인장응력으로 보임", "suggestion": "인장응력으로 수정", "evidence": ""},
+            {"id": "F002", "category": "data", "severity": "critical", "slide_index": 5,
+             "shape_id": "s5_sh3", "position_hint": "슬라이드 5 우측 상단 텍스트 박스", "quoted_text": "최대 응력 250 MPa",
+             "issue": "표 5의 셀에는 240 MPa로 기재됨", "suggestion": "본문 240 MPa 또는 표 250 MPa로 통일",
+             "evidence": "표 5(s5_sh4) 행 3·열 2 = 240"},
+        ],
+    }
+    extracted = {"metadata": {"title": "테스트 보고서", "slide_count": 5},
+                 "slides": [{"index": i, "title": f"슬라이드{i}"} for i in range(1, 6)]}
+    out_path = tmp_path / "review.md"
+    render(findings, extracted, out_path)
+    actual = out_path.read_text(encoding="utf-8")
+    expected = (fixtures_dir / "golden" / "reporter_md" / "sample_review.md").read_text(encoding="utf-8")
+    assert actual == expected
