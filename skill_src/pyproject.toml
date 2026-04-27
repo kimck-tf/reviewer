@@ -29,3 +29,7 @@ include = ["src*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "real_com: requires real MS PowerPoint COM (Windows only, manual execution)",
+]
+addopts = "-m 'not real_com'"
