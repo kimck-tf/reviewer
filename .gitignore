@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+review_ws/
+review_output/
+dist/
+build/
+.venv/
+.vscode/
+.idea/
+*.swp
+*.tmp
+~$*.pptx
