@@ -50,6 +50,17 @@ def _extract_shapes(slide, slide_index: int) -> list[dict[str, Any]]:
         text = ""
         if shape.has_text_frame:
             text = shape.text_frame.text or ""
+
+        table_data = None
+        if shape_type == "Table" and shape.has_table:
+            tbl = shape.table
+            cells = [[cell.text for cell in row.cells] for row in tbl.rows]
+            table_data = {
+                "rows": len(tbl.rows),
+                "cols": len(tbl.columns),
+                "cells": cells,
+            }
+
         out.append({
             "shape_id": f"s{slide_index}_sh{sh_idx}",
             "type": shape_type,
@@ -62,7 +73,7 @@ def _extract_shapes(slide, slide_index: int) -> list[dict[str, Any]]:
             "position_pct": {},
             "z_order": sh_idx,
             "text": text,
-            "table": None,
+            "table": table_data,
             "image_ref": None,
             "embedded_progid": None,
         })

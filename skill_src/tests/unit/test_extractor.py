@@ -22,3 +22,18 @@ def test_extract_first_slide_has_title(sample_text_only: Path):
 def test_extract_includes_file_path(sample_text_only: Path):
     result = extract(sample_text_only)
     assert result["metadata"]["file_path"] == str(sample_text_only)
+
+
+def test_extract_table_shape(sample_with_table: Path):
+    result = extract(sample_with_table)
+    slide = result["slides"][0]
+    tables = [s for s in slide["shapes"] if s["type"] == "Table"]
+    assert len(tables) == 1
+    tbl = tables[0]["table"]
+    assert tbl is not None
+    assert tbl["rows"] == 4
+    assert tbl["cols"] == 3
+    # 헤더 행
+    assert tbl["cells"][0] == ["항목", "값", "단위"]
+    # 데이터 행
+    assert tbl["cells"][1] == ["최대 응력", "240", "MPa"]
