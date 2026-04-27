@@ -55,3 +55,20 @@ def test_extract_speaker_notes(sample_text_only: Path):
     # _make_fixtures.py에서 슬라이드 3~5에 노트 추가됨
     slide3 = result["slides"][2]
     assert "발표 노트" in slide3["notes"]
+
+
+def test_extract_no_embedded_for_text_only(sample_text_only: Path):
+    result = extract(sample_text_only)
+    for slide in result["slides"]:
+        assert slide["has_embedded"] is False
+
+
+def test_extract_detects_embedded(sample_with_embedded: Path):
+    result = extract(sample_with_embedded)
+    has_any_embedded = any(s["has_embedded"] for s in result["slides"])
+    assert has_any_embedded is True
+    for slide in result["slides"]:
+        if slide["has_embedded"]:
+            ole_shapes = [s for s in slide["shapes"] if s["type"] == "EmbeddedOLE"]
+            assert len(ole_shapes) >= 1
+            assert ole_shapes[0]["embedded_progid"]  # non-empty

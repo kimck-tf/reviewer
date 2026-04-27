@@ -4,6 +4,7 @@ from typing import Any
 
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pptx.oxml.ns import qn
 
 
 def extract(pptx_path: Path) -> dict[str, Any]:
@@ -18,6 +19,7 @@ def extract(pptx_path: Path) -> dict[str, Any]:
         notes = ""
         if slide.has_notes_slide:
             notes = slide.notes_slide.notes_text_frame.text or ""
+        has_embedded = any(s["type"] == "EmbeddedOLE" for s in shapes)
         slides.append({
             "index": idx,
             "title": _get_slide_title(slide),
@@ -27,7 +29,7 @@ def extract(pptx_path: Path) -> dict[str, Any]:
             "image_path": None,
             "thumbnail_path": None,
             "embedded_image_paths": [],
-            "has_embedded": False,
+            "has_embedded": has_embedded,
         })
 
     cp = prs.core_properties
@@ -80,6 +82,10 @@ def _extract_shapes(slide, slide_index: int, slide_w: int, slide_h: int) -> list
                 "height": height / slide_h,
             }
 
+        embedded_progid = None
+        if shape_type == "EmbeddedOLE":
+            embedded_progid = _get_embedded_progid(shape)
+
         out.append({
             "shape_id": f"s{slide_index}_sh{sh_idx}",
             "type": shape_type,
@@ -89,9 +95,37 @@ def _extract_shapes(slide, slide_index: int, slide_w: int, slide_h: int) -> list
             "text": text,
             "table": table_data,
             "image_ref": None,
-            "embedded_progid": None,
+            "embedded_progid": embedded_progid,
         })
     return out
+
+
+def _get_embedded_progid(shape) -> str | None:
+    """EmbeddedOLE 도형의 ProgID 추출.
+
+    두 단계로 시도:
+    1) shape.ole_format.prog_id (신규 API)
+    2) OOXML <p:oleObj progId="..."> 속성 직접 추출 (fallback)
+    """
+    try:
+        if hasattr(shape, "ole_format") and shape.ole_format is not None:
+            pid = shape.ole_format.prog_id
+            if pid:
+                return pid
+    except Exception:
+        pass
+
+    try:
+        gframe = shape._element
+        ole_objs = gframe.findall(".//" + qn("p:oleObj"))
+        if ole_objs:
+            pid = ole_objs[0].get("progId")
+            if pid:
+                return pid
+    except Exception:
+        pass
+
+    return None
 
 
 def _classify_shape_type(shape) -> str:
