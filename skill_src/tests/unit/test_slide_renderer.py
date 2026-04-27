@@ -10,9 +10,10 @@ from src.slide_renderer import (
 
 
 def test_module_imports():
-    """render는 아직 NotImplementedError."""
-    with pytest.raises(NotImplementedError):
-        render(Path("x.pptx"), Path("out"), {"slides": []})
+    """모든 공개 함수가 import 가능 (구현 완료)."""
+    assert callable(convert_pptx_to_images_without_embedding)
+    assert callable(convert_pptx_with_embedded_to_images)
+    assert callable(render)
 
 
 def test_mode1_creates_one_image_per_slide(mock_powerpoint_com, tmp_path):
@@ -145,3 +146,81 @@ def test_mode2_pdf_saveas_failure_logs_warning(mock_powerpoint_com, tmp_path, ca
     assert any("PDF 임베디드" in rec.message or "SaveAs" in rec.message for rec in caplog.records)
     # 슬라이드 캡처는 성공
     assert result[1][0].exists()
+
+
+def test_render_calls_mode1_when_no_embedded(monkeypatch, tmp_path):
+    """render가 has_embedded=False 시 mode 1을 호출, mode 2는 호출 안 함."""
+    from PIL import Image as _PI
+    out_dir = tmp_path / "out"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fake_jpg = out_dir / "slide_001.jpg"
+    _PI.new("RGB", (100, 100)).save(fake_jpg)
+
+    mode1_calls = []
+    def fake_mode1(pptx, out, **kwargs):
+        mode1_calls.append((pptx, out))
+        return {1: fake_jpg}
+
+    mode2_calls = []
+    def fake_mode2(pptx, out, **kwargs):
+        mode2_calls.append((pptx, out))
+        return {}
+
+    monkeypatch.setattr("src.slide_renderer.convert_pptx_to_images_without_embedding", fake_mode1)
+    monkeypatch.setattr("src.slide_renderer.convert_pptx_with_embedded_to_images", fake_mode2)
+
+    extracted = {"slides": [{"index": 1, "has_embedded": False}]}
+    render(tmp_path / "in.pptx", out_dir, extracted)
+
+    assert len(mode1_calls) == 1
+    assert len(mode2_calls) == 0
+
+
+def test_render_calls_mode2_when_any_embedded(monkeypatch, tmp_path):
+    """render가 has_embedded=True가 하나라도 있으면 mode 2를 호출."""
+    from PIL import Image as _PI
+    out_dir = tmp_path / "out"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fake_jpg1 = out_dir / "slide_001.jpg"
+    fake_jpg2 = out_dir / "slide_002.jpg"
+    _PI.new("RGB", (100, 100)).save(fake_jpg1)
+    _PI.new("RGB", (100, 100)).save(fake_jpg2)
+
+    mode1_calls = []
+    def fake_mode1(pptx, out, **kwargs):
+        mode1_calls.append((pptx, out))
+        return {}
+
+    mode2_calls = []
+    def fake_mode2(pptx, out, **kwargs):
+        mode2_calls.append((pptx, out))
+        return {1: [fake_jpg1], 2: [fake_jpg2]}
+
+    monkeypatch.setattr("src.slide_renderer.convert_pptx_to_images_without_embedding", fake_mode1)
+    monkeypatch.setattr("src.slide_renderer.convert_pptx_with_embedded_to_images", fake_mode2)
+
+    extracted = {"slides": [
+        {"index": 1, "has_embedded": False},
+        {"index": 2, "has_embedded": True},
+    ]}
+    render(tmp_path / "in.pptx", out_dir, extracted)
+
+    assert len(mode2_calls) == 1
+    assert len(mode1_calls) == 0
+
+
+def test_render_creates_thumbnails(mock_powerpoint_com, tmp_path):
+    """실제 mode 1 + 썸네일 생성 통합 검증."""
+    app, pres, slides = mock_powerpoint_com(slide_count=1)
+    pptx_path = tmp_path / "in.pptx"
+    pptx_path.write_bytes(b"")
+    out_dir = tmp_path / "out"
+    extracted = {"slides": [{"index": 1, "has_embedded": False}]}
+
+    render(pptx_path, out_dir, extracted, thumbnail_max_dim=300)
+
+    thumb = out_dir / "thumbnails" / "slide_001.jpg"
+    assert thumb.exists()
+    from PIL import Image
+    with Image.open(thumb) as img:
+        assert max(img.size) <= 300

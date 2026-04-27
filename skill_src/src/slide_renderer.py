@@ -222,5 +222,51 @@ def render(
     pdf_dpi: int = 150,
     thumbnail_max_dim: int = 480,
 ) -> dict[int, list[Path]]:
-    """자동 모드 선택 오케스트레이터. extracted dict의 has_embedded 플래그로 슬라이드별 분기."""
-    raise NotImplementedError
+    """자동 모드 선택 오케스트레이터.
+
+    has_embedded가 하나라도 True면 모드 2, 아니면 모드 1 사용.
+    썸네일은 항상 생성.
+    """
+    pptx_path = Path(pptx_path).resolve()
+    out_dir = Path(out_dir).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    has_any_embedded = any(s.get("has_embedded") for s in extracted.get("slides", []))
+
+    if has_any_embedded:
+        result = convert_pptx_with_embedded_to_images(
+            pptx_path, out_dir, width=width, height=height, pdf_dpi=pdf_dpi
+        )
+    else:
+        paths_dict = convert_pptx_to_images_without_embedding(
+            pptx_path, out_dir, width=width, height=height
+        )
+        # 모드 1은 dict[int, Path] 반환 → dict[int, list[Path]]로 통일
+        result = {idx: [p] for idx, p in paths_dict.items()}
+
+    # 썸네일 생성
+    thumb_dir = out_dir / "thumbnails"
+    thumb_dir.mkdir(parents=True, exist_ok=True)
+    _generate_thumbnails(result, thumb_dir, max_dim=thumbnail_max_dim)
+
+    return result
+
+
+def _generate_thumbnails(
+    rendered: dict[int, list[Path]],
+    thumb_dir: Path,
+    max_dim: int,
+) -> None:
+    """원본 슬라이드 이미지(각 슬라이드의 첫 번째 경로)를 썸네일로 축소."""
+    from PIL import Image
+
+    for slide_idx, paths in rendered.items():
+        if not paths:
+            continue
+        src = paths[0]
+        target = thumb_dir / f"slide_{slide_idx:03d}.jpg"
+        with Image.open(src) as img:
+            img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            img.save(target, "JPEG", quality=85)
