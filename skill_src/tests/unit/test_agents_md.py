@@ -11,6 +11,7 @@ EXPECTED_AGENTS = [
     "report-reviewer-improvement",
     "report-reviewer-logic",
     "report-reviewer-document",
+    "report-reviewer-merger",
 ]
 
 
@@ -59,6 +60,15 @@ def test_category_subagents_have_output_schema():
         text = path.read_text(encoding="utf-8")
         for key in ["id", "severity", "slide_index", "shape_id", "position_pct", "quoted_text", "issue", "suggestion"]:
             assert key in text, f"{cat} SA에 {key} 누락"
+
+
+def test_merger_subagent_has_required_keys():
+    """Merger SA가 통합 출력에 categories[]·source_finding_ids[] 필드를 포함."""
+    path = AGENTS_DIR / "report-reviewer-merger.md"
+    text = path.read_text(encoding="utf-8")
+    assert "tools: Read" in text
+    for key in ["categories", "source_finding_ids", "F001"]:
+        assert key in text, f"merger SA에 {key} 누락"
 
 
 def test_document_subagent_has_macro_output_schema():

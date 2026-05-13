@@ -81,7 +81,7 @@ def test_summary_header_and_category_grouping(tmp_path):
     findings = {
         "summary": {
             "total_issues": 3,
-            "by_severity": {"critical": 1, "warning": 2, "info": 0},
+            "by_severity": {"critical": 1, "warning": 2, "minor": 0},
             "by_category": {"typo": 2, "data": 1, "terminology": 0, "conclusion": 0, "improvement": 0, "logic": 0},
         },
         "findings": [
@@ -167,9 +167,62 @@ def test_document_review_absent_keeps_legacy_layout(tmp_path):
     assert "## 문서 전체 평가" not in text
 
 
+def test_merged_finding_displays_multiple_categories_and_source_ids(tmp_path):
+    """Merger SA가 만든 통합 finding: categories[] 복수 라벨 + (원본 ...) 접미사."""
+    findings = {
+        "summary": {"total_issues": 1, "by_severity": {"critical": 1}, "by_category": {}},
+        "findings": [
+            {
+                "id": "F001",
+                "categories": ["conclusion", "improvement", "logic"],
+                "severity": "critical",
+                "slide_index": 9, "shape_id": "s9_sh1",
+                "position_hint": "슬라이드 9",
+                "quoted_text": "환경변수 하나로 LLM을 무중단 전환할 수 있다",
+                "issue": "종합 문제 설명",
+                "suggestion": "종합 제안",
+                "evidence": "종합 근거",
+                "source_finding_ids": ["C002", "I005", "L001"],
+            },
+        ],
+    }
+    extracted = {"metadata": {"title": "T", "slide_count": 9}, "slides": [{"index": 9}]}
+    out_path = tmp_path / "review.md"
+    render(findings, extracted, out_path)
+    text = out_path.read_text(encoding="utf-8")
+
+    # 헤더에 원본 ID 표시
+    assert "(원본 C002·I005·L001)" in text
+    # 복수 카테고리 라벨 (한국어 슬래시 결합)
+    assert "결론 검증 / 개선 제안 / 논리·강도" in text
+    # 카테고리별 그룹: 세 카테고리 모두에 동일 finding 노출 (A안)
+    assert text.count("F001") >= 3  # 발견된 이슈 + 슬라이드별 + 카테고리별 3개 그룹 = 5회 이상
+
+
+def test_legacy_single_category_field_still_renders(tmp_path):
+    """단수 `category` 필드만 있는 finding도 기존처럼 렌더 (호환성)."""
+    findings = {
+        "summary": {"total_issues": 1, "by_severity": {"warning": 1}, "by_category": {"typo": 1}},
+        "findings": [
+            {
+                "id": "T001", "category": "typo", "severity": "warning",
+                "slide_index": 1, "shape_id": "s1_sh1",
+                "position_hint": "슬라이드 1", "quoted_text": "x",
+                "issue": "오타", "suggestion": "수정", "evidence": "",
+            },
+        ],
+    }
+    extracted = {"metadata": {"title": "T", "slide_count": 1}, "slides": [{"index": 1}]}
+    out_path = tmp_path / "review.md"
+    render(findings, extracted, out_path)
+    text = out_path.read_text(encoding="utf-8")
+    assert "오타" in text  # 카테고리 라벨
+    assert "(원본" not in text  # 단일 카테고리는 원본 접미사 없음
+
+
 def test_render_matches_golden(tmp_path, fixtures_dir):
     findings = {
-        "summary": {"total_issues": 2, "by_severity": {"critical": 1, "warning": 1, "info": 0},
+        "summary": {"total_issues": 2, "by_severity": {"critical": 1, "warning": 1, "minor": 0},
                     "by_category": {"typo": 1, "data": 1}},
         "findings": [
             {"id": "F001", "category": "typo", "severity": "warning", "slide_index": 2,

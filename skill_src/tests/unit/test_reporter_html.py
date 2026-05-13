@@ -128,6 +128,39 @@ def test_html_no_document_review_section_when_absent(tmp_path):
     assert '<section class="document-review">' not in text
 
 
+def test_html_merged_finding_categories_and_source_ids(tmp_path):
+    """HTML 통합 finding 렌더: 복수 카테고리 라벨 + (원본 ...) 접미사 + 카테고리별 그룹 중복 표시."""
+    findings = {
+        "summary": {"total_issues": 1, "by_severity": {"critical": 1}, "by_category": {}},
+        "findings": [
+            {
+                "id": "F001",
+                "categories": ["conclusion", "improvement", "logic"],
+                "severity": "critical",
+                "slide_index": 9, "shape_id": "s9_sh1",
+                "position_hint": "S9", "quoted_text": "원문",
+                "issue": "종합 문제", "suggestion": "종합 제안", "evidence": "종합 근거",
+                "source_finding_ids": ["C002", "I005", "L001"],
+            },
+        ],
+    }
+    extracted = {"metadata": {"title": "T", "slide_count": 9}, "slides": []}
+    out_dir = tmp_path / "out"
+    render(findings, extracted, out_dir)
+    text = (out_dir / "review.html").read_text(encoding="utf-8")
+
+    # 헤더 표시
+    assert "F001" in text
+    assert "C002" in text and "I005" in text and "L001" in text
+    assert "결론 검증 / 개선 제안 / 논리·강도" in text
+    # 카테고리별 그룹 섹션
+    assert '<section class="categories-section">' in text
+    # 세 카테고리 그룹에 모두 노출 (A안 중복 표시)
+    assert text.count('data-category="conclusion"') == 1
+    assert text.count('data-category="improvement"') == 1
+    assert text.count('data-category="logic"') == 1
+
+
 def test_html_full_integration(tmp_path):
     """모든 카테고리·심각도가 섞인 findings로 HTML 렌더 + DOM 구조 검증."""
     thumb1 = tmp_path / "ws" / "thumbnails" / "slide_001.jpg"
@@ -139,11 +172,11 @@ def test_html_full_integration(tmp_path):
     findings = {
         "summary": {
             "total_issues": 3,
-            "by_severity": {"critical": 1, "warning": 1, "info": 1},
+            "by_severity": {"critical": 1, "warning": 1, "minor": 1},
             "by_category": {"typo": 1, "data": 1, "logic": 1},
         },
         "findings": [
-            {"id": "F001", "category": "typo", "severity": "info", "slide_index": 1,
+            {"id": "F001", "category": "typo", "severity": "minor", "slide_index": 1,
              "shape_id": "s1_sh1", "position_hint": "S1",
              "position_pct": {"left": 0.1, "top": 0.1, "width": 0.3, "height": 0.1},
              "quoted_text": "오타", "issue": "i1", "suggestion": "s1", "evidence": ""},
@@ -173,7 +206,7 @@ def test_html_full_integration(tmp_path):
         assert fid in text
     assert "Critical: 1" in text
     assert "Warning: 1" in text
-    assert "Info: 1" in text
+    assert "Minor: 1" in text
     assert text.count('<div class="slide-card">') == 2  # 슬라이드 1, 2만
     assert text.count("position-box") == 3  # 각 finding당 1개
     assert (out_dir / "assets" / "style.css").exists()

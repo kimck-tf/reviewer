@@ -61,19 +61,21 @@ PPTX → [Python: 추출+이미지] → [Claude SA: 분석+검증] → [Python: 
 ```
 
 1. **추출 단계** (`extract_and_render.py`): python-pptx로 텍스트·표·도형·위치 추출 → PowerPoint COM으로 슬라이드 JPG 변환 → `extracted.json` + `slide_inputs/slide_NNN.json` 생성
-2. **분석 단계** (SKILL.md 워크플로): 메인 Claude가 subagent를 두 단계로 dispatch (총 1+7=8개 SA):
+2. **분석 단계** (SKILL.md 워크플로): 메인 Claude가 subagent를 세 단계로 dispatch (총 1+7+1=9개 SA):
    - 1단계: `report-reviewer-slide-analyzer` 1개 — 슬라이드별 multimodal 분석 (이미지 + JSON 동시 입력)
    - 2단계: 7개 SA 동시 dispatch
-     - 카테고리 6개(typo/terminology/data/conclusion/improvement/logic) — 슬라이드 단위 미시 검토, 결과는 `findings[]`로 concat
-     - `report-reviewer-document` 1개 — 문서 전체 거시 검토 (핵심 질문 답변·스토리라인·결정 정보·청중·슬라이드 간 모순), 결과는 `document_review` 객체로 저장
-3. **렌더 단계** (`render_report.py`): findings + extracted → `review.md` + `review.html` (review의 맨 앞에 "문서 전체 평가" 섹션 → 슬라이드별/카테고리별 이슈 순)
+     - 카테고리 6개(typo/terminology/data/conclusion/improvement/logic) — 슬라이드 단위 미시 검토, 결과는 raw `findings[]`로 concat → `findings_raw.json` 저장
+     - `report-reviewer-document` 1개 — 문서 전체 거시 검토, `document_review` 객체로 저장
+   - 2.5단계: `report-reviewer-merger` 1개 — 같은 원문·같은 대상의 multi-category 중복 지적을 단일 finding으로 종합 재작성. 출력은 `categories[]`·`source_finding_ids[]` 포함된 통합 `findings[]`
+3. **렌더 단계** (`render_report.py`): 통합 findings + extracted → `review.md` + `review.html` (맨 앞 "문서 전체 평가" → 발견된 이슈(통합) → 슬라이드별 → 카테고리별 — 통합 finding은 자신의 모든 카테고리 그룹에 중복 표시)
 
 `review_ws/` 산출물 (디버깅 시 확인 위치):
 - `extracted.json` — Step 1 결과 (전체 메타데이터)
 - `slides/slide_NNN.jpg`, `thumbnails/slide_NNN.jpg` — Step 1 이미지
 - `slide_inputs/slide_NNN.json` — Step 2 SA 입력 (슬라이드별)
 - `slide_summaries.json` — Step 2 결과 (1단계 SA 누적)
-- `findings.json` — Step 3 결과 (2단계 SA concat)
+- `findings_raw.json` — Step 3 결과 (6개 카테고리 SA concat, 통합 전)
+- `findings.json` — Step 3.5 결과 (Merger SA 통합 + document_review)
 
 ### 주요 데이터 흐름
 
@@ -84,21 +86,27 @@ slides[]: {index, title, shapes[], notes, image_path, thumbnail_path, has_embedd
   shapes[]: {shape_id("s{i}_sh{j}"), type, position_emu, position_pct(0~1), text, table, embedded_progid}
 ```
 
-`findings.json` 스키마:
+`findings.json` 스키마 (Merger SA 통합 후):
 ```
 summary: {total_issues, by_severity, by_category}
-findings[]: {id(prefix+숫자), category, severity, slide_index, shape_id,
-             position_pct, position_hint, quoted_text, issue, suggestion, evidence}
-document_review (옵션, 거시 SA 결과):
-  {thesis_question, thesis_answered(yes|partial|no), thesis_answer_summary,
-   story_flow_severity, story_flow_assessment,
-   decision_information_severity, decision_information_assessment,
-   audience_fit_severity, audience_fit_assessment,
-   cross_slide_concerns[]: {slide_indexes[], severity, issue, suggestion},
-   overall_grade(excellent|good|fair|needs_work), overall_assessment}
+findings[]: {id(F+숫자), categories[]("typo"|"terminology"|...),
+             severity, slide_index, shape_id,
+             position_pct, position_hint, quoted_text, issue, suggestion, evidence,
+             source_finding_ids[]}
+document_review: {위와 동일}
 ```
 
-Finding ID prefix: `T`(typo), `TM`(terminology), `D`(data), `C`(conclusion), `I`(improvement), `L`(logic). 거시 SA(document)는 ID 없음 — `findings[]`와 별도 키 `document_review`로 저장 (미러링 안 함).
+`findings_raw.json` 스키마 (Merger SA 이전 raw):
+```
+findings[]: {id(prefix+숫자), category(단수), severity, slide_index, shape_id, ...}
+```
+
+Finding ID prefix:
+- raw (6개 카테고리 SA): `T`(typo), `TM`(terminology), `D`(data), `C`(conclusion), `I`(improvement), `L`(logic)
+- 통합 (Merger): `F` 1종, `categories[]`·`source_finding_ids[]`로 원본 추적
+- 거시 SA(document)는 ID 없음 — `document_review` 객체로 별도 저장 (미러링 안 함)
+
+reporter는 단수 `category`와 복수 `categories[]` 둘 다 처리 (legacy 호환). 통합 finding은 자신의 모든 카테고리 그룹에 중복 표시 (A안).
 
 ### 파일별 책임
 
@@ -112,7 +120,7 @@ Finding ID prefix: `T`(typo), `TM`(terminology), `D`(data), `C`(conclusion), `I`
 | `src/config.py` | 환경변수 → frozen dataclass |
 | `templates/report.html.j2` | HTML 리포트 Jinja2 템플릿 (position-box CSS 이미 포함) |
 | `SKILL.md` | 메인 Claude가 실행할 워크플로 가이드 (Step 0~5) |
-| `agents_src/*.md` | 1+7=8개 subagent 시스템 프롬프트 (slide-analyzer + 6 카테고리 + document 거시, `tools: Read`만) |
+| `agents_src/*.md` | 1+7+1=9개 subagent 시스템 프롬프트 (slide-analyzer + 6 카테고리 + document 거시 + merger 통합, `tools: Read`만) |
 
 ### slide_renderer의 두 모드
 

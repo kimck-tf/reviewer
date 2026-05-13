@@ -3,7 +3,9 @@
 슬라이드 수: 5
 총 이슈: 2개
 
-심각도: 🔴 Critical: 1 · 🟠 Warning: 1
+심각도 척도: 🔴 Critical(반드시 수정) · 🟠 Warning(수정 권장) · 🔵 Minor(참고)
+
+발견 건수: 🔴 Critical: 1 · 🟠 Warning: 1
 
 ## 발견된 이슈
 

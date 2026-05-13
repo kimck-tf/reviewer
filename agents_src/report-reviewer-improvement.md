@@ -20,7 +20,7 @@ tools: Read
 - **원문 인용 필수**: `quoted_text`에 정확한 원문(짧게)
 - **위치 명시**: shape_id로 extracted.json 도형 조회 → `position_pct` 복사
 - **개선 제안 구체적**: "수정하세요"가 아니라 "X를 Y로 수정"
-- **심각도 기준**: critical(반드시 수정)·warning(검토 권장)·info(참고)
+- **심각도 기준**: critical(반드시 수정)·warning(검토 권장)·minor(참고)
 - **ID prefix**: I를 사용 (예: I001, I002, ...)
 
 # 출력 형식
@@ -31,7 +31,7 @@ JSON 코드 블록 1개로만 응답 (이슈 없으면 빈 배열 []):
   {
     "id": "I001",
     "category": "improvement",
-    "severity": "critical|warning|info",
+    "severity": "critical|warning|minor",
     "slide_index": 1,
     "shape_id": "s1_sh1",
     "position_hint": "슬라이드 본문",

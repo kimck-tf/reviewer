@@ -8,7 +8,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 
-_SEVERITY_LABEL = {"critical": "Critical", "warning": "Warning", "info": "Info", "ok": "OK"}
+_SEVERITY_LABEL = {"critical": "Critical", "warning": "Warning", "minor": "Minor", "ok": "OK"}
 _CATEGORY_LABEL = {
     "typo": "오타", "terminology": "용어 통일", "data": "데이터",
     "conclusion": "결론 검증", "improvement": "개선 제안", "logic": "논리·강도",
@@ -22,6 +22,28 @@ _DOC_AXES = [
     ("decision_information", "결정 정보 충분성"),
     ("audience_fit", "청중 적합성"),
 ]
+
+
+def _finding_categories(f: dict) -> list[str]:
+    """finding의 카테고리 리스트. 복수 `categories[]` 우선, 없으면 단수 `category` 1개 리스트."""
+    cats = f.get("categories")
+    if cats:
+        return list(cats)
+    cat = f.get("category")
+    return [cat] if cat else []
+
+
+def _category_label(cats: list[str]) -> str:
+    """카테고리 리스트 → ' / '로 결합된 한국어 라벨."""
+    return " / ".join(_CATEGORY_LABEL.get(c, c) for c in cats)
+
+
+def _source_ids_suffix(f: dict) -> str:
+    """source_finding_ids가 2개 이상일 때 '(원본 A·B·C)' 형태 접미사. 그 외 빈 문자열."""
+    src = f.get("source_finding_ids") or []
+    if len(src) >= 2:
+        return f"(원본 {'·'.join(src)})"
+    return ""
 
 
 def _build_document_review_ctx(doc: dict | None) -> dict | None:
@@ -87,7 +109,7 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_dir: Path) -
 
     severity_counts = []
     by_sev = summary.get("by_severity", {})
-    for sk in ("critical", "warning", "info"):
+    for sk in ("critical", "warning", "minor"):
         if by_sev.get(sk, 0) > 0:
             severity_counts.append((sk, _SEVERITY_LABEL[sk], by_sev[sk]))
 
@@ -116,7 +138,8 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_dir: Path) -
                 "id": f.get("id", "?"),
                 "severity": f.get("severity", "info"),
                 "severity_label": _SEVERITY_LABEL.get(f.get("severity", "info"), ""),
-                "category_label": _CATEGORY_LABEL.get(f.get("category", ""), f.get("category", "")),
+                "category_label": _category_label(_finding_categories(f)),
+                "source_ids_suffix": _source_ids_suffix(f),
                 "quoted_text": f.get("quoted_text", ""),
                 "issue": f.get("issue", ""),
                 "suggestion": f.get("suggestion", ""),
@@ -144,11 +167,36 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_dir: Path) -
 
     document_review_ctx = _build_document_review_ctx(findings.get("document_review"))
 
+    # 카테고리별 그룹 — 통합 finding은 자신의 모든 카테고리 그룹에 중복 표시(A안)
+    by_cat: dict[str, list[dict]] = {}
+    for f in findings.get("findings", []):
+        for c in _finding_categories(f):
+            by_cat.setdefault(c, []).append(f)
+    categories_with_findings = []
+    for cat in sorted(by_cat.keys()):
+        cat_items = []
+        for f in by_cat[cat]:
+            cat_items.append({
+                "id": f.get("id", "?"),
+                "source_ids_suffix": _source_ids_suffix(f),
+                "severity": f.get("severity", "info"),
+                "severity_label": _SEVERITY_LABEL.get(f.get("severity", "info"), ""),
+                "slide_index": f.get("slide_index"),
+                "issue": f.get("issue", ""),
+            })
+        categories_with_findings.append({
+            "key": cat,
+            "label": _CATEGORY_LABEL.get(cat, cat),
+            "count": len(by_cat[cat]),
+            "findings": cat_items,
+        })
+
     rendered = template.render(
         title=title,
         slide_count=slide_count,
         total_issues=total,
         severity_counts=severity_counts,
+        categories_with_findings=categories_with_findings,
         slides_with_findings=slides_with_findings,
         document_review=document_review_ctx,
     )

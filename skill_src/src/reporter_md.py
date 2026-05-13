@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Any
 
 
-_SEVERITY_KO = {"critical": "🔴 Critical", "warning": "🟠 Warning", "info": "🔵 Info", "ok": "🟢 OK"}
+_SEVERITY_KO = {"critical": "🔴 Critical", "warning": "🟠 Warning", "minor": "🔵 Minor", "ok": "🟢 OK"}
+_SEVERITY_LEGEND = "🔴 Critical(반드시 수정) · 🟠 Warning(수정 권장) · 🔵 Minor(참고)"
 _CATEGORY_KO = {
     "typo": "오타",
     "terminology": "용어 통일",
@@ -26,6 +27,28 @@ _DOC_AXES = [
 ]
 
 
+def _finding_categories(f: dict[str, Any]) -> list[str]:
+    """finding의 카테고리 리스트를 반환. 복수 `categories[]` 우선, 없으면 단수 `category` 1개 리스트."""
+    cats = f.get("categories")
+    if cats:
+        return list(cats)
+    cat = f.get("category")
+    return [cat] if cat else []
+
+
+def _category_label(cats: list[str]) -> str:
+    """카테고리 리스트 → ' / '로 결합된 한국어 라벨."""
+    return " / ".join(_CATEGORY_KO.get(c, c) for c in cats)
+
+
+def _source_ids_suffix(f: dict[str, Any]) -> str:
+    """source_finding_ids가 자기 자신 1개가 아닐 때 '(원본 A·B·C)' 형태 접미사 반환. 그 외 빈 문자열."""
+    src = f.get("source_finding_ids") or []
+    if len(src) >= 2:
+        return f" (원본 {'·'.join(src)})"
+    return ""
+
+
 def render(findings: dict[str, Any], extracted: dict[str, Any], out_path: Path) -> Path:
     """findings.json + extracted.json → 마크다운 리포트 파일 생성. 출력 경로 반환."""
     out_path = Path(out_path)
@@ -42,16 +65,20 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_path: Path) 
     lines.append(f"총 이슈: {total}개")
     lines.append("")
 
-    # 요약 헤더 보강
+    # 심각도 범례 (항상 표시)
+    lines.append(f"심각도 척도: {_SEVERITY_LEGEND}")
+    lines.append("")
+
+    # 요약 헤더 — 발견 건수 분포
     by_sev = summary.get("by_severity", {})
     if by_sev:
         sev_parts = []
-        for sk, ko in [("critical", "Critical"), ("warning", "Warning"), ("info", "Info")]:
+        for sk, ko in [("critical", "Critical"), ("warning", "Warning"), ("minor", "Minor")]:
             n = by_sev.get(sk, 0)
             if n > 0:
                 sev_parts.append(f"{_SEVERITY_KO.get(sk, ko)}: {n}")
         if sev_parts:
-            lines.append("심각도: " + " · ".join(sev_parts))
+            lines.append("발견 건수: " + " · ".join(sev_parts))
             lines.append("")
 
     # 문서 전체 평가 (거시 SA 결과) — 슬라이드별 이슈 위에 배치
@@ -87,23 +114,24 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_path: Path) 
             lines.append("")
             for f in by_slide[slide_idx]:
                 sev = _SEVERITY_KO.get(f.get("severity", ""), "")
-                cat = _CATEGORY_KO.get(f.get("category", ""), "")
-                lines.append(f"- [{f.get('id', '?')}] {sev} · {cat} · {f.get('issue', '')}")
+                cat_label = _category_label(_finding_categories(f))
+                lines.append(f"- [{f.get('id', '?')}]{_source_ids_suffix(f)} {sev} · {cat_label} · {f.get('issue', '')}")
             lines.append("")
 
-        # 카테고리별 그룹
+        # 카테고리별 그룹 — 통합 finding은 자신의 모든 카테고리 그룹에 중복 표시(A안)
         lines.append("## 카테고리별 이슈")
         lines.append("")
         by_cat: dict[str, list[dict[str, Any]]] = {}
         for f in findings.get("findings", []):
-            by_cat.setdefault(f.get("category", ""), []).append(f)
+            for c in _finding_categories(f):
+                by_cat.setdefault(c, []).append(f)
         for cat in sorted(by_cat.keys()):
             cat_ko = _CATEGORY_KO.get(cat, cat)
             lines.append(f"### {cat_ko} ({len(by_cat[cat])}건)")
             lines.append("")
             for f in by_cat[cat]:
                 sev = _SEVERITY_KO.get(f.get("severity", ""), "")
-                lines.append(f"- [{f.get('id', '?')}] {sev} · 슬라이드 {f.get('slide_index')} · {f.get('issue', '')}")
+                lines.append(f"- [{f.get('id', '?')}]{_source_ids_suffix(f)} {sev} · 슬라이드 {f.get('slide_index')} · {f.get('issue', '')}")
             lines.append("")
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
@@ -176,11 +204,11 @@ def _format_document_review(doc: dict[str, Any]) -> list[str]:
 
 
 def _format_finding(f: dict[str, Any]) -> list[str]:
-    """단일 finding을 마크다운 블록(라인 리스트)으로."""
+    """단일 finding을 마크다운 블록(라인 리스트)으로. categories 복수와 source_finding_ids 통합 표시 포함."""
     sev = _SEVERITY_KO.get(f.get("severity", "info"), f.get("severity", "info"))
-    cat = _CATEGORY_KO.get(f.get("category", ""), f.get("category", ""))
+    cat_label = _category_label(_finding_categories(f))
     block = [
-        f"### [{f.get('id', '?')}] {sev} · {cat} · {f.get('position_hint', '')}",
+        f"### [{f.get('id', '?')}]{_source_ids_suffix(f)} {sev} · {cat_label} · {f.get('position_hint', '')}",
         "",
         f"**원문 인용**: \"{f.get('quoted_text', '')}\"",
         "",

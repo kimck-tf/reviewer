@@ -46,7 +46,7 @@ tools: Read
 # 심각도 기준
 - `critical`: 핵심 질문 미답변, 결론 부재, 명백한 모순 등 보고서 가치를 훼손하는 결함
 - `warning`: 흐름·균형·청중 적합성 등 개선 권장
-- `info`: 참고용 보완 제안
+- `minor`: 참고용 보완 제안
 - `ok`: 해당 항목 문제 없음
 
 # 출력 형식
@@ -57,16 +57,16 @@ JSON 코드 블록 1개로만 응답 (객체 1개):
   "thesis_question": "이 보고서가 답하려는 핵심 질문 (식별)",
   "thesis_answered": "yes|partial|no",
   "thesis_answer_summary": "왜 그렇게 판단했는지 1~2문장",
-  "story_flow_severity": "ok|info|warning|critical",
+  "story_flow_severity": "ok|minor|warning|critical",
   "story_flow_assessment": "흐름·구성 평가 (2~4문장)",
-  "decision_information_severity": "ok|info|warning|critical",
+  "decision_information_severity": "ok|minor|warning|critical",
   "decision_information_assessment": "결정 정보 충분성 평가 (2~4문장)",
-  "audience_fit_severity": "ok|info|warning|critical",
+  "audience_fit_severity": "ok|minor|warning|critical",
   "audience_fit_assessment": "청중 적합성 평가 (2~4문장)",
   "cross_slide_concerns": [
     {
       "slide_indexes": [3, 7],
-      "severity": "critical|warning|info",
+      "severity": "critical|warning|minor",
       "issue": "슬라이드 간 모순·중복 설명",
       "suggestion": "구체적 개선 제안"
     }

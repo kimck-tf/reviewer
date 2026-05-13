@@ -17,7 +17,7 @@ def test_skill_md_workflow_steps_present():
     text = skill_md.read_text(encoding="utf-8")
     for step_heading in [
         "### Step 0", "### Step 1", "### Step 2",
-        "### Step 3", "### Step 4", "### Step 5",
+        "### Step 3", "### Step 3.5", "### Step 4", "### Step 5",
     ]:
         assert step_heading in text, f"누락: {step_heading}"
 
@@ -34,5 +34,6 @@ def test_skill_md_subagent_names():
         "report-reviewer-improvement",
         "report-reviewer-logic",
         "report-reviewer-document",
+        "report-reviewer-merger",
     ]:
         assert sa in text, f"SKILL.md에 {sa} 참조 없음"

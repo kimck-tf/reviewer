@@ -11,12 +11,18 @@
   <p>슬라이드 수: {{ slide_count }}</p>
   <p>총 이슈: {{ total_issues }}개</p>
   {% if total_issues > 0 and severity_counts %}
-  <p>심각도:
+  <p>발견 건수:
     {% for sev_key, sev_label, count in severity_counts %}
       <span class="severity-{{ sev_key }}">{{ sev_label }}: {{ count }}</span>{% if not loop.last %} · {% endif %}
     {% endfor %}
   </p>
   {% endif %}
+  <div class="severity-legend">
+    <strong>심각도 척도</strong>:
+    <span class="severity-critical">🔴 Critical</span>(반드시 수정) ·
+    <span class="severity-warning">🟠 Warning</span>(수정 권장) ·
+    <span class="severity-minor">🔵 Minor</span>(참고)
+  </div>
 </div>
 
 {% if document_review %}
@@ -88,7 +94,7 @@
   {% endif %}
   {% for f in slide.findings %}
   <div class="finding-card {{ f.severity }}">
-    <strong>[{{ f.id }}] {{ f.severity_label }} · {{ f.category_label }}</strong>
+    <strong>[{{ f.id }}]{% if f.source_ids_suffix %} <span class="source-ids">{{ f.source_ids_suffix }}</span>{% endif %} {{ f.severity_label }} · {{ f.category_label }}</strong>
     <p>원문: "{{ f.quoted_text }}"</p>
     <p>문제: {{ f.issue }}</p>
     <p>개선 제안: {{ f.suggestion }}</p>
@@ -97,6 +103,27 @@
   {% endfor %}
 </div>
 {% endfor %}
+
+{% if categories_with_findings %}
+<section class="categories-section">
+  <h2>카테고리별 이슈</h2>
+  {% for cat in categories_with_findings %}
+  <div class="category-group" data-category="{{ cat.key }}">
+    <h3>{{ cat.label }} ({{ cat.count }}건)</h3>
+    <ul>
+      {% for item in cat.findings %}
+      <li class="cat-item severity-{{ item.severity }}">
+        <strong>[{{ item.id }}]{% if item.source_ids_suffix %} <span class="source-ids">{{ item.source_ids_suffix }}</span>{% endif %}</strong>
+        <span class="severity-{{ item.severity }}">{{ item.severity_label }}</span>
+        · 슬라이드 {{ item.slide_index }}
+        · {{ item.issue }}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
 {% endif %}
 </body>
 </html>
