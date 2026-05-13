@@ -8,11 +8,61 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 
-_SEVERITY_LABEL = {"critical": "Critical", "warning": "Warning", "info": "Info"}
+_SEVERITY_LABEL = {"critical": "Critical", "warning": "Warning", "info": "Info", "ok": "OK"}
 _CATEGORY_LABEL = {
     "typo": "오타", "terminology": "용어 통일", "data": "데이터",
     "conclusion": "결론 검증", "improvement": "개선 제안", "logic": "논리·강도",
 }
+_THESIS_ANSWERED_LABEL = {"yes": "답변됨", "partial": "부분 답변", "no": "미답변"}
+_GRADE_LABEL = {
+    "excellent": "Excellent", "good": "Good", "fair": "Fair", "needs_work": "Needs Work",
+}
+_DOC_AXES = [
+    ("story_flow", "스토리라인 흐름 / 구성 균형"),
+    ("decision_information", "결정 정보 충분성"),
+    ("audience_fit", "청중 적합성"),
+]
+
+
+def _build_document_review_ctx(doc: dict | None) -> dict | None:
+    """document_review 객체 → 템플릿용 컨텍스트. 없거나 비어 있으면 None."""
+    if not doc:
+        return None
+    axes_ctx = []
+    for key, label in _DOC_AXES:
+        sev = doc.get(f"{key}_severity")
+        assessment = doc.get(f"{key}_assessment")
+        if not (sev or assessment):
+            continue
+        axes_ctx.append({
+            "label": label,
+            "severity": sev or "",
+            "severity_label": _SEVERITY_LABEL.get(sev, sev or ""),
+            "assessment": assessment or "",
+        })
+    concerns_ctx = []
+    for c in doc.get("cross_slide_concerns") or []:
+        idxs = c.get("slide_indexes") or []
+        concerns_ctx.append({
+            "slide_indexes": idxs,
+            "slide_indexes_label": ", ".join(f"슬라이드 {i}" for i in idxs),
+            "severity": c.get("severity", "info"),
+            "severity_label": _SEVERITY_LABEL.get(c.get("severity", "info"), ""),
+            "issue": c.get("issue", ""),
+            "suggestion": c.get("suggestion", ""),
+        })
+    grade = doc.get("overall_grade")
+    return {
+        "overall_grade": grade or "",
+        "overall_grade_label": _GRADE_LABEL.get(grade, grade or ""),
+        "overall_assessment": doc.get("overall_assessment", ""),
+        "thesis_question": doc.get("thesis_question", ""),
+        "thesis_answered": doc.get("thesis_answered", ""),
+        "thesis_answered_label": _THESIS_ANSWERED_LABEL.get(doc.get("thesis_answered"), doc.get("thesis_answered", "")),
+        "thesis_answer_summary": doc.get("thesis_answer_summary", ""),
+        "axes": axes_ctx,
+        "cross_slide_concerns": concerns_ctx,
+    }
 
 
 def render(findings: dict[str, Any], extracted: dict[str, Any], out_dir: Path) -> Path:
@@ -92,12 +142,15 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_dir: Path) -
             "findings": formatted_findings,
         })
 
+    document_review_ctx = _build_document_review_ctx(findings.get("document_review"))
+
     rendered = template.render(
         title=title,
         slide_count=slide_count,
         total_issues=total,
         severity_counts=severity_counts,
         slides_with_findings=slides_with_findings,
+        document_review=document_review_ctx,
     )
     out_path = out_dir / "review.html"
     out_path.write_text(rendered, encoding="utf-8")

@@ -10,6 +10,7 @@ EXPECTED_AGENTS = [
     "report-reviewer-conclusion",
     "report-reviewer-improvement",
     "report-reviewer-logic",
+    "report-reviewer-document",
 ]
 
 
@@ -58,3 +59,22 @@ def test_category_subagents_have_output_schema():
         text = path.read_text(encoding="utf-8")
         for key in ["id", "severity", "slide_index", "shape_id", "position_pct", "quoted_text", "issue", "suggestion"]:
             assert key in text, f"{cat} SA에 {key} 누락"
+
+
+def test_document_subagent_has_macro_output_schema():
+    """거시 SA는 슬라이드 단위 필드(shape_id/position_pct)를 출력에 강제하지 않고,
+    문서 전체 평가 필드를 갖는다."""
+    path = AGENTS_DIR / "report-reviewer-document.md"
+    text = path.read_text(encoding="utf-8")
+    assert "tools: Read" in text
+    for key in [
+        "thesis_question",
+        "thesis_answered",
+        "story_flow_severity",
+        "decision_information_severity",
+        "audience_fit_severity",
+        "cross_slide_concerns",
+        "overall_grade",
+        "overall_assessment",
+    ]:
+        assert key in text, f"document SA에 {key} 누락"

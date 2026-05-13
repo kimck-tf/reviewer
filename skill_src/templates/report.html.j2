@@ -19,6 +19,56 @@
   {% endif %}
 </div>
 
+{% if document_review %}
+<section class="document-review">
+  <h2>문서 전체 평가</h2>
+  {% if document_review.overall_grade %}
+  <div class="overall-grade grade-{{ document_review.overall_grade }}">
+    <span class="grade-label">종합 등급</span>
+    <span class="grade-value">{{ document_review.overall_grade_label }}</span>
+  </div>
+  {% endif %}
+  {% if document_review.overall_assessment %}
+  <blockquote class="overall-assessment">{{ document_review.overall_assessment }}</blockquote>
+  {% endif %}
+
+  {% if document_review.thesis_question or document_review.thesis_answered %}
+  <div class="doc-axis thesis">
+    <h3>핵심 질문 답변 여부</h3>
+    {% if document_review.thesis_question %}<p><strong>핵심 질문</strong>: {{ document_review.thesis_question }}</p>{% endif %}
+    {% if document_review.thesis_answered %}
+    <p><strong>답변 여부</strong>: <span class="thesis-{{ document_review.thesis_answered }}">{{ document_review.thesis_answered_label }}</span></p>
+    {% endif %}
+    {% if document_review.thesis_answer_summary %}<p><strong>판단 근거</strong>: {{ document_review.thesis_answer_summary }}</p>{% endif %}
+  </div>
+  {% endif %}
+
+  {% for axis in document_review.axes %}
+  <div class="doc-axis axis-{{ axis.severity }}">
+    <h3>{{ axis.label }}</h3>
+    {% if axis.severity %}<p><strong>평가</strong>: <span class="severity-{{ axis.severity }}">{{ axis.severity_label }}</span></p>{% endif %}
+    {% if axis.assessment %}<p>{{ axis.assessment }}</p>{% endif %}
+  </div>
+  {% endfor %}
+
+  {% if document_review.cross_slide_concerns %}
+  <div class="doc-axis cross-slide">
+    <h3>슬라이드 간 모순·중복</h3>
+    <ul>
+    {% for c in document_review.cross_slide_concerns %}
+      <li class="concern severity-{{ c.severity }}">
+        <strong>{{ c.severity_label }}</strong>
+        {% if c.slide_indexes_label %} · {{ c.slide_indexes_label }}{% endif %}
+        {% if c.issue %}<div>문제: {{ c.issue }}</div>{% endif %}
+        {% if c.suggestion %}<div>제안: {{ c.suggestion }}</div>{% endif %}
+      </li>
+    {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
 {% if total_issues == 0 %}
 <div class="empty">
   <h2>검토 결과 이슈 없음</h2>

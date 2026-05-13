@@ -13,3 +13,26 @@ h1 { border-bottom: 2px solid #1a1a1a; padding-bottom: 0.3em; }
 .finding-card.warning { border-left-color: #f97316; }
 .finding-card.info { border-left-color: #0ea5e9; }
 .empty { text-align: center; padding: 3em; color: #666; }
+
+.document-review { border: 1px solid #c7d2fe; background: #eef2ff; border-radius: 10px; padding: 1.2em 1.5em; margin: 1em 0 2em; }
+.document-review h2 { margin-top: 0; border-bottom: 1px solid #c7d2fe; padding-bottom: 0.3em; }
+.document-review .overall-grade { display: inline-block; padding: 0.4em 0.9em; border-radius: 999px; font-weight: bold; margin: 0.5em 0; }
+.document-review .overall-grade .grade-label { margin-right: 0.5em; opacity: 0.7; font-weight: normal; }
+.document-review .overall-grade.grade-excellent { background: #dcfce7; color: #15803d; }
+.document-review .overall-grade.grade-good { background: #dbeafe; color: #1d4ed8; }
+.document-review .overall-grade.grade-fair { background: #fef9c3; color: #a16207; }
+.document-review .overall-grade.grade-needs_work { background: #fee2e2; color: #b91c1c; }
+.document-review .overall-assessment { border-left: 4px solid #6366f1; margin: 0.5em 0 1em; padding: 0.4em 0.8em; background: #fff; color: #1f2937; font-style: italic; }
+.document-review .doc-axis { background: #fff; border-radius: 6px; padding: 0.6em 0.9em; margin: 0.6em 0; }
+.document-review .doc-axis h3 { margin: 0 0 0.4em; font-size: 1.05em; }
+.document-review .doc-axis.axis-critical { border-left: 4px solid #dc2626; }
+.document-review .doc-axis.axis-warning { border-left: 4px solid #f97316; }
+.document-review .doc-axis.axis-info { border-left: 4px solid #0ea5e9; }
+.document-review .doc-axis.axis-ok { border-left: 4px solid #22c55e; }
+.document-review .thesis-yes { color: #15803d; font-weight: bold; }
+.document-review .thesis-partial { color: #a16207; font-weight: bold; }
+.document-review .thesis-no { color: #b91c1c; font-weight: bold; }
+.document-review .concern { margin: 0.4em 0; padding: 0.4em 0.6em; background: #fafafa; border-radius: 4px; }
+.document-review .concern.severity-critical { border-left: 3px solid #dc2626; }
+.document-review .concern.severity-warning { border-left: 3px solid #f97316; }
+.document-review .concern.severity-info { border-left: 3px solid #0ea5e9; }

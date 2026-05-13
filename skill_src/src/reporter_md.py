@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 
 
-_SEVERITY_KO = {"critical": "🔴 Critical", "warning": "🟠 Warning", "info": "🔵 Info"}
+_SEVERITY_KO = {"critical": "🔴 Critical", "warning": "🟠 Warning", "info": "🔵 Info", "ok": "🟢 OK"}
 _CATEGORY_KO = {
     "typo": "오타",
     "terminology": "용어 통일",
@@ -12,6 +12,18 @@ _CATEGORY_KO = {
     "improvement": "개선 제안",
     "logic": "논리·강도",
 }
+_THESIS_ANSWERED_KO = {"yes": "✅ 답변됨", "partial": "🟡 부분 답변", "no": "❌ 미답변"}
+_GRADE_KO = {
+    "excellent": "🟢 Excellent",
+    "good": "🔵 Good",
+    "fair": "🟡 Fair",
+    "needs_work": "🔴 Needs Work",
+}
+_DOC_AXES = [
+    ("story_flow", "스토리라인 흐름 / 구성 균형"),
+    ("decision_information", "결정 정보 충분성"),
+    ("audience_fit", "청중 적합성"),
+]
 
 
 def render(findings: dict[str, Any], extracted: dict[str, Any], out_path: Path) -> Path:
@@ -41,6 +53,12 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_path: Path) 
         if sev_parts:
             lines.append("심각도: " + " · ".join(sev_parts))
             lines.append("")
+
+    # 문서 전체 평가 (거시 SA 결과) — 슬라이드별 이슈 위에 배치
+    doc = findings.get("document_review")
+    if doc:
+        lines.extend(_format_document_review(doc))
+        lines.append("")
 
     if total == 0:
         lines.append("## 검토 결과 이슈 없음")
@@ -90,6 +108,71 @@ def render(findings: dict[str, Any], extracted: dict[str, Any], out_path: Path) 
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
     return out_path
+
+
+def _format_document_review(doc: dict[str, Any]) -> list[str]:
+    """document_review 객체 → 마크다운 블록(라인 리스트)."""
+    lines: list[str] = ["## 문서 전체 평가", ""]
+
+    grade = doc.get("overall_grade")
+    if grade:
+        lines.append(f"**종합 등급**: {_GRADE_KO.get(grade, grade)}")
+        lines.append("")
+
+    overall = doc.get("overall_assessment")
+    if overall:
+        lines.append(f"> {overall}")
+        lines.append("")
+
+    # 핵심 질문 + 답변 여부
+    thesis_q = doc.get("thesis_question")
+    thesis_a = doc.get("thesis_answered")
+    if thesis_q or thesis_a:
+        lines.append("### 핵심 질문 답변 여부")
+        lines.append("")
+        if thesis_q:
+            lines.append(f"- **핵심 질문**: {thesis_q}")
+        if thesis_a:
+            lines.append(f"- **답변 여부**: {_THESIS_ANSWERED_KO.get(thesis_a, thesis_a)}")
+        summary_text = doc.get("thesis_answer_summary")
+        if summary_text:
+            lines.append(f"- **판단 근거**: {summary_text}")
+        lines.append("")
+
+    # 5개 축 중 3개 단일 항목 (story_flow / decision_information / audience_fit)
+    for key, label in _DOC_AXES:
+        sev = doc.get(f"{key}_severity")
+        assessment = doc.get(f"{key}_assessment")
+        if not (sev or assessment):
+            continue
+        sev_label = _SEVERITY_KO.get(sev, sev or "")
+        lines.append(f"### {label}")
+        lines.append("")
+        if sev_label:
+            lines.append(f"- **평가**: {sev_label}")
+        if assessment:
+            lines.append(f"- {assessment}")
+        lines.append("")
+
+    # 슬라이드 간 모순·중복
+    concerns = doc.get("cross_slide_concerns") or []
+    if concerns:
+        lines.append("### 슬라이드 간 모순·중복")
+        lines.append("")
+        for c in concerns:
+            sev = _SEVERITY_KO.get(c.get("severity", "info"), c.get("severity", ""))
+            idxs = c.get("slide_indexes") or []
+            idx_label = ", ".join(f"슬라이드 {i}" for i in idxs) if idxs else "(슬라이드 미지정)"
+            lines.append(f"- {sev} · {idx_label}")
+            issue = c.get("issue")
+            if issue:
+                lines.append(f"  - **문제**: {issue}")
+            suggestion = c.get("suggestion")
+            if suggestion:
+                lines.append(f"  - **제안**: {suggestion}")
+        lines.append("")
+
+    return lines
 
 
 def _format_finding(f: dict[str, Any]) -> list[str]:

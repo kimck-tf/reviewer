@@ -76,6 +76,58 @@ def test_html_includes_position_boxes(tmp_path):
     assert "width:25" in text or "width: 25" in text
 
 
+def test_html_document_review_section(tmp_path):
+    """document_review 컨텍스트가 HTML에 '문서 전체 평가' 섹션으로 렌더된다."""
+    findings = {
+        "summary": {"total_issues": 0, "by_severity": {}, "by_category": {}},
+        "findings": [],
+        "document_review": {
+            "thesis_question": "X 부품 강도 목표 만족 여부?",
+            "thesis_answered": "no",
+            "thesis_answer_summary": "결론 슬라이드 부재",
+            "story_flow_severity": "warning",
+            "story_flow_assessment": "흐름 비대칭",
+            "decision_information_severity": "critical",
+            "decision_information_assessment": "권고 누락",
+            "audience_fit_severity": "ok",
+            "audience_fit_assessment": "적절",
+            "cross_slide_concerns": [
+                {"slide_indexes": [2, 5], "severity": "warning",
+                 "issue": "수치 표기 자릿수 상이", "suggestion": "소수점 2자리로 통일"},
+            ],
+            "overall_grade": "needs_work",
+            "overall_assessment": "결론 보강 필요",
+        },
+    }
+    extracted = {"metadata": {"title": "T", "slide_count": 5}, "slides": []}
+    out_dir = tmp_path / "out"
+    render(findings, extracted, out_dir)
+    text = (out_dir / "review.html").read_text(encoding="utf-8")
+
+    assert '<section class="document-review">' in text
+    assert "문서 전체 평가" in text
+    assert "X 부품 강도 목표 만족 여부?" in text
+    assert "grade-needs_work" in text
+    assert "Needs Work" in text
+    # 5개 축
+    assert "스토리라인 흐름" in text
+    assert "결정 정보 충분성" in text
+    assert "청중 적합성" in text
+    # cross-slide
+    assert "슬라이드 2" in text and "슬라이드 5" in text
+    assert "소수점 2자리로 통일" in text
+
+
+def test_html_no_document_review_section_when_absent(tmp_path):
+    """document_review 키가 없으면 해당 섹션이 렌더되지 않는다 (회귀 방지)."""
+    findings = {"summary": {"total_issues": 0, "by_severity": {}, "by_category": {}}, "findings": []}
+    extracted = {"metadata": {"title": "T", "slide_count": 1}, "slides": []}
+    out_dir = tmp_path / "out"
+    render(findings, extracted, out_dir)
+    text = (out_dir / "review.html").read_text(encoding="utf-8")
+    assert '<section class="document-review">' not in text
+
+
 def test_html_full_integration(tmp_path):
     """모든 카테고리·심각도가 섞인 findings로 HTML 렌더 + DOM 구조 검증."""
     thumb1 = tmp_path / "ws" / "thumbnails" / "slide_001.jpg"

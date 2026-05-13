@@ -105,6 +105,68 @@ def test_summary_header_and_category_grouping(tmp_path):
     assert "### 데이터" in text or "### 데이터 (1건)" in text
 
 
+def test_document_review_section_rendered(tmp_path):
+    """document_review 객체가 있으면 '문서 전체 평가' 섹션이 슬라이드 이슈보다 앞에 렌더된다."""
+    findings = {
+        "summary": {"total_issues": 1, "by_severity": {"warning": 1}, "by_category": {"typo": 1}},
+        "findings": [
+            {"id": "T001", "category": "typo", "severity": "warning", "slide_index": 1,
+             "shape_id": "s1_sh1", "position_hint": "S1", "quoted_text": "x", "issue": "i", "suggestion": "s"},
+        ],
+        "document_review": {
+            "thesis_question": "X 부품 내구 강도가 목표를 만족하는가?",
+            "thesis_answered": "partial",
+            "thesis_answer_summary": "결과 슬라이드는 있으나 결론 슬라이드 부재",
+            "story_flow_severity": "warning",
+            "story_flow_assessment": "분석 8장 대비 결론 0장으로 비대칭",
+            "decision_information_severity": "critical",
+            "decision_information_assessment": "권고 사항 누락",
+            "audience_fit_severity": "ok",
+            "audience_fit_assessment": "엔지니어 청중에 적절",
+            "cross_slide_concerns": [
+                {"slide_indexes": [3, 7], "severity": "critical",
+                 "issue": "최대 응력 수치 불일치", "suggestion": "표 데이터 통일"},
+            ],
+            "overall_grade": "needs_work",
+            "overall_assessment": "결론·권고 보강이 필요",
+        },
+    }
+    extracted = {"metadata": {"title": "T", "slide_count": 8},
+                 "slides": [{"index": 1, "title": "표지"}]}
+    out_path = tmp_path / "review.md"
+    render(findings, extracted, out_path)
+    text = out_path.read_text(encoding="utf-8")
+
+    # 섹션 헤더와 핵심 필드 노출
+    assert "## 문서 전체 평가" in text
+    assert "X 부품 내구 강도가 목표를 만족하는가?" in text
+    assert "부분 답변" in text or "partial" in text
+    assert "Needs Work" in text or "needs_work" in text
+    assert "결론·권고 보강이 필요" in text
+    # 5개 축 노출
+    assert "스토리라인 흐름" in text
+    assert "결정 정보 충분성" in text
+    assert "청중 적합성" in text
+    # cross-slide 모순 표기 (슬라이드 인덱스 + 제안)
+    assert "슬라이드 3" in text and "슬라이드 7" in text
+    assert "표 데이터 통일" in text
+    # 위치 순서: 문서 전체 평가가 슬라이드별 이슈보다 먼저 와야 함
+    assert text.find("## 문서 전체 평가") < text.find("## 슬라이드별 이슈")
+
+
+def test_document_review_absent_keeps_legacy_layout(tmp_path):
+    """document_review 키가 없으면 기존 출력과 동일하게 동작한다 (회귀 방지)."""
+    findings = {
+        "summary": {"total_issues": 0, "by_severity": {}, "by_category": {}},
+        "findings": [],
+    }
+    extracted = {"metadata": {"title": "T", "slide_count": 1}, "slides": []}
+    out_path = tmp_path / "review.md"
+    render(findings, extracted, out_path)
+    text = out_path.read_text(encoding="utf-8")
+    assert "## 문서 전체 평가" not in text
+
+
 def test_render_matches_golden(tmp_path, fixtures_dir):
     findings = {
         "summary": {"total_issues": 2, "by_severity": {"critical": 1, "warning": 1, "info": 0},

@@ -33,5 +33,6 @@ def test_skill_md_subagent_names():
         "report-reviewer-conclusion",
         "report-reviewer-improvement",
         "report-reviewer-logic",
+        "report-reviewer-document",
     ]:
         assert sa in text, f"SKILL.md에 {sa} 참조 없음"

@@ -36,23 +36,21 @@ cd "C:/_PYTHON/0_CK_Project/8. Reviewer/skill_src"
 # COM 통합 테스트 (Windows + PowerPoint 필요, 수동 실행)
 .venv/Scripts/pytest -m real_com -v
 
-# CLI: PPTX 추출 + 이미지 변환
+# CLI: PPTX 추출 + 이미지 변환 (인자: pptx_path, --out)
 .venv/Scripts/python extract_and_render.py "C:/path/to/report.pptx" --out "C:/path/to/review_ws"
 
-# CLI: 리포트 생성 (findings.json 생성 후)
+# CLI: 리포트 생성 (인자: work_dir, --out)
 .venv/Scripts/python render_report.py "C:/path/to/review_ws" --out "C:/path/to/review_output"
 
 # 글로벌 배포 (PowerShell)
 ./deploy.ps1
 ```
 
-골든 파일 재생성이 필요할 때:
-```bash
-.venv/Scripts/python -c "
-from pathlib import Path; from src.reporter_md import render
-# ... render() 호출 후 출력 검토
-"
-```
+**워크플로 옵션 vs CLI 옵션 구분**:
+- `/report-reviewer ... --resume|--rerun-stage2|--rerender`는 메인 Claude가 SKILL.md에 따라 산출물 파일 존재 여부로 분기하는 **워크플로 옵션**임
+- `extract_and_render.py` / `render_report.py`는 이런 옵션이 없고, 매번 처음부터 실행됨 (개발자가 단계별 디버깅 시 그냥 다시 돌리면 됨)
+
+골든 파일 재생성: `tests/fixtures/_make_fixtures.py` 실행. 이후 `tests/fixtures/golden/` 결과 수동 검토 필요.
 
 ## 아키텍처
 
@@ -63,10 +61,19 @@ PPTX → [Python: 추출+이미지] → [Claude SA: 분석+검증] → [Python: 
 ```
 
 1. **추출 단계** (`extract_and_render.py`): python-pptx로 텍스트·표·도형·위치 추출 → PowerPoint COM으로 슬라이드 JPG 변환 → `extracted.json` + `slide_inputs/slide_NNN.json` 생성
-2. **분석 단계** (SKILL.md 워크플로): 메인 Claude가 subagent를 두 단계로 dispatch:
-   - 1단계: `report-reviewer-slide-analyzer` — 슬라이드별 multimodal 분석 (이미지 + JSON 동시 입력)
-   - 2단계: 6개 카테고리 SA 동시 dispatch → 결과 concat → `findings.json`
-3. **렌더 단계** (`render_report.py`): findings + extracted → `review.md` + `review.html`
+2. **분석 단계** (SKILL.md 워크플로): 메인 Claude가 subagent를 두 단계로 dispatch (총 1+7=8개 SA):
+   - 1단계: `report-reviewer-slide-analyzer` 1개 — 슬라이드별 multimodal 분석 (이미지 + JSON 동시 입력)
+   - 2단계: 7개 SA 동시 dispatch
+     - 카테고리 6개(typo/terminology/data/conclusion/improvement/logic) — 슬라이드 단위 미시 검토, 결과는 `findings[]`로 concat
+     - `report-reviewer-document` 1개 — 문서 전체 거시 검토 (핵심 질문 답변·스토리라인·결정 정보·청중·슬라이드 간 모순), 결과는 `document_review` 객체로 저장
+3. **렌더 단계** (`render_report.py`): findings + extracted → `review.md` + `review.html` (review의 맨 앞에 "문서 전체 평가" 섹션 → 슬라이드별/카테고리별 이슈 순)
+
+`review_ws/` 산출물 (디버깅 시 확인 위치):
+- `extracted.json` — Step 1 결과 (전체 메타데이터)
+- `slides/slide_NNN.jpg`, `thumbnails/slide_NNN.jpg` — Step 1 이미지
+- `slide_inputs/slide_NNN.json` — Step 2 SA 입력 (슬라이드별)
+- `slide_summaries.json` — Step 2 결과 (1단계 SA 누적)
+- `findings.json` — Step 3 결과 (2단계 SA concat)
 
 ### 주요 데이터 흐름
 
@@ -82,9 +89,16 @@ slides[]: {index, title, shapes[], notes, image_path, thumbnail_path, has_embedd
 summary: {total_issues, by_severity, by_category}
 findings[]: {id(prefix+숫자), category, severity, slide_index, shape_id,
              position_pct, position_hint, quoted_text, issue, suggestion, evidence}
+document_review (옵션, 거시 SA 결과):
+  {thesis_question, thesis_answered(yes|partial|no), thesis_answer_summary,
+   story_flow_severity, story_flow_assessment,
+   decision_information_severity, decision_information_assessment,
+   audience_fit_severity, audience_fit_assessment,
+   cross_slide_concerns[]: {slide_indexes[], severity, issue, suggestion},
+   overall_grade(excellent|good|fair|needs_work), overall_assessment}
 ```
 
-Finding ID prefix: `T`(typo), `TM`(terminology), `D`(data), `C`(conclusion), `I`(improvement), `L`(logic)
+Finding ID prefix: `T`(typo), `TM`(terminology), `D`(data), `C`(conclusion), `I`(improvement), `L`(logic). 거시 SA(document)는 ID 없음 — `findings[]`와 별도 키 `document_review`로 저장 (미러링 안 함).
 
 ### 파일별 책임
 
@@ -98,7 +112,7 @@ Finding ID prefix: `T`(typo), `TM`(terminology), `D`(data), `C`(conclusion), `I`
 | `src/config.py` | 환경변수 → frozen dataclass |
 | `templates/report.html.j2` | HTML 리포트 Jinja2 템플릿 (position-box CSS 이미 포함) |
 | `SKILL.md` | 메인 Claude가 실행할 워크플로 가이드 (Step 0~5) |
-| `agents_src/*.md` | 7개 subagent 시스템 프롬프트 (`tools: Read`만) |
+| `agents_src/*.md` | 1+7=8개 subagent 시스템 프롬프트 (slide-analyzer + 6 카테고리 + document 거시, `tools: Read`만) |
 
 ### slide_renderer의 두 모드
 
